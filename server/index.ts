@@ -54,7 +54,11 @@ const server = app.listen(config.port, '0.0.0.0', async () => {
   `);
 
   // Attempt database connection
-  await connectToDatabase();
+  try {
+    await connectToDatabase();
+  } catch (err: any) {
+    console.warn('[DATABASE] Initial connection delayed; will auto-retry on incoming requests.');
+  }
 });
 
 // Graceful Shutdown
