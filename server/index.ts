@@ -15,6 +15,21 @@ app.use(
 );
 app.use(express.json());
 
+// Root Route
+app.get('/', (_req: Request, res: Response) => {
+  res.status(200).json({
+    service: 'BUTCHER PROTOCOL API',
+    status: 'ONLINE',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      jobs: '/api/jobs',
+      aiAnalyzeJob: '/api/ai/analyze-job',
+      aiTailorResume: '/api/ai/tailor-resume',
+    },
+  });
+});
+
 // Direct Health Route
 app.get('/api/health', (_req: Request, res: Response) => {
   res.status(200).json({
@@ -28,7 +43,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
 app.use('/api', apiRouter);
 
 // Start Server
-const server = app.listen(config.port, async () => {
+const server = app.listen(config.port, '0.0.0.0', async () => {
   console.log(`
 ======================================================
   BUTCHER PROTOCOL // BACKEND COMMAND SERVER
