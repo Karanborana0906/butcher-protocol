@@ -4,6 +4,7 @@ import { Job } from '../models/Job.js';
 import { analyzeJobWithGemma, tailorResumeWithGemma } from '../services/ai/gemmaService.js';
 import { getActiveCandidateProfile } from '../services/profile/candidateProfile.js';
 import { config } from '../config/index.js';
+import { connectToDatabase } from '../db/mongodb.js';
 
 export const aiRouter = Router();
 
@@ -33,7 +34,10 @@ aiRouter.post('/analyze-job', async (req: Request, res: Response) => {
       });
     }
 
-    // 3. Load job from MongoDB (by jobId, externalId, or MongoDB _id)
+    // 3. Ensure database is connected
+    await connectToDatabase();
+
+    // 4. Load job from MongoDB (by jobId, externalId, or MongoDB _id)
     const queryConditions: any[] = [
       { jobId: cleanJobId },
       { externalId: cleanJobId },
@@ -120,7 +124,10 @@ aiRouter.post('/tailor-resume', async (req: Request, res: Response) => {
       });
     }
 
-    // 3. Load job from MongoDB
+    // 3. Ensure database is connected
+    await connectToDatabase();
+
+    // 4. Load job from MongoDB
     const queryConditions: any[] = [
       { jobId: cleanJobId },
       { externalId: cleanJobId },

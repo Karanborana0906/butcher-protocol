@@ -12,7 +12,13 @@ const connection: ConnectionState = {};
  */
 export async function connectToDatabase(): Promise<typeof mongoose | null> {
   // If already connected, reuse connection
-  if (connection.isConnected === 1) {
+  if (mongoose.connection.readyState === 1) {
+    return mongoose;
+  }
+
+  // If currently connecting, wait for connection
+  if (mongoose.connection.readyState === 2) {
+    await new Promise((resolve) => mongoose.connection.once('connected', resolve));
     return mongoose;
   }
 
@@ -22,15 +28,14 @@ export async function connectToDatabase(): Promise<typeof mongoose | null> {
     console.warn(
       '[DATABASE WARNING] MONGODB_URI is not set in environment variables. Database features will remain dormant until configured.'
     );
-    return null;
+    throw new Error('MONGODB_URI is not set on the server.');
   }
 
   try {
     const db = await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 8000,
+      serverSelectionTimeoutMS: 5000,
     });
 
-    connection.isConnected = db.connections[0].readyState;
     console.log('[DATABASE] MongoDB connection established successfully.');
     return db;
   } catch (error: any) {
@@ -39,8 +44,7 @@ export async function connectToDatabase(): Promise<typeof mongoose | null> {
       ? error.message.replace(/mongodb(\+srv)?:\/\/[^@]+@/gi, 'mongodb$1://***:***@')
       : 'Unknown connection failure';
     console.error('[DATABASE ERROR] Failed to connect to MongoDB:', safeMessage);
-    connection.isConnected = 0;
-    return null;
+    throw new Error(`MongoDB connection failed (${safeMessage}). If using MongoDB Atlas, make sure Network Access has 0.0.0.0/0 allowed.`);
   }
 }
 
