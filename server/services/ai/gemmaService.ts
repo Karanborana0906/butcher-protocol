@@ -176,7 +176,7 @@ ${job.description.slice(0, 4000)}
   let response: Response | null = null;
   let lastErrorMsg = '';
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
     response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -207,10 +207,11 @@ ${job.description.slice(0, 4000)}
       lastErrorMsg += ` - ${errorBody.slice(0, 200)}`;
     }
 
-    // Only retry transient 500/503 errors
-    if ((response.status === 500 || response.status === 503) && attempt < 2) {
-      console.warn(`[GemmaService] Transient ${response.status} from Gemini API, retrying in 1.5s...`);
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+    // Retry transient 500/503 errors with exponential backoff
+    if ((response.status === 500 || response.status === 503) && attempt < 3) {
+      const backoffMs = attempt * 2000;
+      console.warn(`[GemmaService] Transient ${response.status} from Gemini API, retrying in ${backoffMs}ms (attempt ${attempt}/3)...`);
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
       continue;
     }
 
@@ -486,7 +487,7 @@ ${job.description.slice(0, 3000)}
   let response: Response | null = null;
   let lastErrorMsg = '';
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
     response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -517,9 +518,11 @@ ${job.description.slice(0, 3000)}
       lastErrorMsg += ` - ${errorBody.slice(0, 200)}`;
     }
 
-    if ((response.status === 500 || response.status === 503) && attempt < 2) {
-      console.warn(`[GemmaService] Transient ${response.status} from Gemini API during tailorResume, retrying in 1.5s...`);
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+    // Retry transient 500/503 errors with exponential backoff
+    if ((response.status === 500 || response.status === 503) && attempt < 3) {
+      const backoffMs = attempt * 2000;
+      console.warn(`[GemmaService] Transient ${response.status} from Gemini API during tailorResume, retrying in ${backoffMs}ms (attempt ${attempt}/3)...`);
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
       continue;
     }
 
