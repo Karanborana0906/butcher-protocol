@@ -5,6 +5,7 @@ import { analyzeJobWithGemma, tailorResumeWithGemma } from '../services/ai/gemma
 import { getActiveCandidateProfile } from '../services/profile/candidateProfile.js';
 import { config } from '../config/index.js';
 import { connectToDatabase } from '../db/mongodb.js';
+import { FALLBACK_MOCK_JOBS } from '../data/fallbackJobs.js';
 
 export const aiRouter = Router();
 
@@ -49,7 +50,38 @@ aiRouter.post('/analyze-job', async (req: Request, res: Response) => {
 
     const job = await Job.findOne({ $or: queryConditions });
 
-    if (!job) {
+    let targetJob = job
+      ? {
+          jobId: job.jobId || String(job._id),
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          description: job.description,
+          skills: job.skills,
+          requirements: job.requirements,
+          experienceLevel: job.experienceLevel,
+        }
+      : null;
+
+    if (!targetJob) {
+      const mock = FALLBACK_MOCK_JOBS.find(
+        (j) => j.id === cleanJobId || j.jobId === cleanJobId
+      );
+      if (mock) {
+        targetJob = {
+          jobId: mock.id,
+          title: mock.title,
+          company: mock.company,
+          location: mock.location,
+          description: mock.description,
+          skills: mock.skills,
+          requirements: mock.requirements,
+          experienceLevel: mock.experienceLevel,
+        };
+      }
+    }
+
+    if (!targetJob) {
       return res.status(404).json({
         success: false,
         error: `Target job with identifier "${cleanJobId}" not found in database.`,
@@ -60,23 +92,13 @@ aiRouter.post('/analyze-job', async (req: Request, res: Response) => {
     const candidateProfile = getActiveCandidateProfile();
 
     // 5. Send job + candidate profile to Gemma 4 31B IT
-    const analysis = await analyzeJobWithGemma(
-      {
-        jobId: job.jobId || String(job._id),
-        title: job.title,
-        company: job.company,
-        location: job.location,
-        description: job.description,
-        skills: job.skills,
-        requirements: job.requirements,
-        experienceLevel: job.experienceLevel,
-      },
-      candidateProfile
-    );
+    const analysis = await analyzeJobWithGemma(targetJob, candidateProfile);
 
-    // 6. Update job's match score in database for persistence
-    job.matchPercentage = analysis.matchScore;
-    await job.save();
+    // 6. Update job's match score in database for persistence if in DB
+    if (job) {
+      job.matchPercentage = analysis.matchScore;
+      await job.save();
+    }
 
     // 7. Return verified structured response
     return res.status(200).json({
@@ -139,7 +161,38 @@ aiRouter.post('/tailor-resume', async (req: Request, res: Response) => {
 
     const job = await Job.findOne({ $or: queryConditions });
 
-    if (!job) {
+    let targetJob = job
+      ? {
+          jobId: job.jobId || String(job._id),
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          description: job.description,
+          skills: job.skills,
+          requirements: job.requirements,
+          experienceLevel: job.experienceLevel,
+        }
+      : null;
+
+    if (!targetJob) {
+      const mock = FALLBACK_MOCK_JOBS.find(
+        (j) => j.id === cleanJobId || j.jobId === cleanJobId
+      );
+      if (mock) {
+        targetJob = {
+          jobId: mock.id,
+          title: mock.title,
+          company: mock.company,
+          location: mock.location,
+          description: mock.description,
+          skills: mock.skills,
+          requirements: mock.requirements,
+          experienceLevel: mock.experienceLevel,
+        };
+      }
+    }
+
+    if (!targetJob) {
       return res.status(404).json({
         success: false,
         error: `Target job with identifier "${cleanJobId}" not found in database.`,
@@ -151,16 +204,7 @@ aiRouter.post('/tailor-resume', async (req: Request, res: Response) => {
 
     // 5. Send job + candidate profile to Gemma 4 31B IT
     const tailoredResume = await tailorResumeWithGemma(
-      {
-        jobId: job.jobId || String(job._id),
-        title: job.title,
-        company: job.company,
-        location: job.location,
-        description: job.description,
-        skills: job.skills,
-        requirements: job.requirements,
-        experienceLevel: job.experienceLevel,
-      },
+      targetJob,
       candidateProfile
     );
 
