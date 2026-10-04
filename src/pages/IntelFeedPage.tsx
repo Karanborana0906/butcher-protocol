@@ -238,7 +238,7 @@ export const IntelFeedPage: React.FC = () => {
                   color: 'var(--text-secondary)',
                 }}
               >
-                Verify that the backend Express server is running on http://localhost:5000.
+                Verify that the backend service is reachable and online.
               </p>
             </div>
             <Button
